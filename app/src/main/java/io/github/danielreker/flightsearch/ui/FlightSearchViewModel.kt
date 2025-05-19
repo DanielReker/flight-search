@@ -7,6 +7,7 @@ import io.github.danielreker.flightsearch.data.entities.Airport
 import io.github.danielreker.flightsearch.data.entities.Favorite
 import io.github.danielreker.flightsearch.data.model.Route
 import io.github.danielreker.flightsearch.data.repositories.FlightSearchRepository
+import io.github.danielreker.flightsearch.data.repositories.UserPreferencesRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,9 +16,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -28,15 +31,24 @@ import javax.inject.Inject
 @HiltViewModel
 class FlightSearchViewModel @Inject constructor(
     private val flightSearchRepository: FlightSearchRepository,
+    private val preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
 
     private val _currentSearchQuery = MutableStateFlow("")
     private val _currentlySelectedAirport = MutableStateFlow<Airport?>(null)
 
+    init {
+        viewModelScope.launch {
+            val storedSearchQuery = preferencesRepository.searchQuery.first()
+            if (_currentSearchQuery.value.isBlank() && storedSearchQuery != null)
+                _currentSearchQuery.update { storedSearchQuery }
+        }
+    }
 
     private val airportSuggestionsFlow: StateFlow<List<Airport>?> = _currentSearchQuery
         .debounce { if (it.isNotBlank()) 300L else 0L }
         .distinctUntilChanged()
+        .onEach { preferencesRepository.saveSearchQuery(it) }
         .flatMapLatest { query ->
             flow {
                 emit(null)
