@@ -93,17 +93,20 @@ fun FlightSearchScreen(
             ) }
         ) { innerPadding ->
             Column(
-                modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = onQueryChanged,
-                    placeholder = { Text("Enter departure airport") },
+                    placeholder = { Text(stringResource(R.string.enter_departure_airport)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Rounded.Search,
-                            contentDescription = "Search",
+                            contentDescription = stringResource(R.string.search),
                         )
                     },
                     trailingIcon = {
@@ -112,7 +115,7 @@ fun FlightSearchScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Clear,
-                                contentDescription = "Clear search",
+                                contentDescription = stringResource(R.string.clear_search),
                             )
                         }
                     },
@@ -137,7 +140,7 @@ fun FlightSearchScreen(
                                 }
                             }
                         } else if (uiState.airportSuggestions != null) {
-                            Text("No airports found")
+                            Text(stringResource(R.string.no_airports_found))
                         } else {
                             CircularProgressIndicator()
                         }
@@ -145,15 +148,18 @@ fun FlightSearchScreen(
                     is FlightSearchUiState.FavoriteRoutes -> {
                         RouteList(
                             title =
-                                if (uiState.displayedRoutes?.isNotEmpty() == true) "Favorite routes"
-                                else "No favorite routes",
+                                if (uiState.displayedRoutes?.isNotEmpty() == true) stringResource(R.string.favorite_routes)
+                                else stringResource(R.string.no_favorite_routes),
                             onFavoriteClick = onFavoriteClick,
                             routes = uiState.displayedRoutes,
                         )
                     }
                     is FlightSearchUiState.RoutesFromAirport -> {
                         RouteList(
-                            title = "Flights from ${uiState.selectedAirport.iataCode}",
+                            title = stringResource(
+                                R.string.flights_from,
+                                uiState.selectedAirport.iataCode
+                            ),
                             onFavoriteClick = onFavoriteClick,
                             routes = uiState.displayedRoutes,
                         )
@@ -215,14 +221,16 @@ fun RouteCard(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.padding(16.dp).fillMaxWidth()
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                RouteCardAirport(caption = "DEPART", airport = route.departure)
+                RouteCardAirport(caption = stringResource(R.string.depart), airport = route.departure)
                 Spacer(Modifier.height(8.dp))
-                RouteCardAirport(caption = "ARRIVE", airport = route.destination)
+                RouteCardAirport(caption = stringResource(R.string.arrive), airport = route.destination)
             }
             Spacer(Modifier.width(32.dp))
             IconButton(
@@ -231,7 +239,7 @@ fun RouteCard(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Star,
-                    contentDescription = "Favorite button",
+                    contentDescription = stringResource(R.string.favorite_button),
                     modifier = Modifier.fillMaxSize(),
                     tint = if (route.isFavorite) Color.Yellow else Color.Gray,
                 )
