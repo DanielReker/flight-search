@@ -1,6 +1,7 @@
 package io.github.danielreker.flightsearch.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,6 +34,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -69,9 +74,17 @@ fun FlightSearchScreen(
     onAirportSelected: (airport: Airport) -> Unit = {},
     onFavoriteClick: (route: Route) -> Unit = {},
 ) {
+    val focusManager = LocalFocusManager.current
+
     FlightSearchTheme {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                },
             topBar = { TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
@@ -80,36 +93,60 @@ fun FlightSearchScreen(
             ) }
         ) { innerPadding ->
             Column(
-                modifier = Modifier.padding(innerPadding).padding(16.dp)
+                modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = onQueryChanged,
                     placeholder = { Text("Enter departure airport") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = "Search",
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { onQueryChanged("") },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Clear,
+                                contentDescription = "Clear search",
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(24.dp))
 
                 when (uiState) {
                     is FlightSearchUiState.Airports -> {
-                        if (uiState.airportSuggestions != null) {
+                        if (uiState.airportSuggestions?.isNotEmpty() == true) {
                             LazyColumn {
                                 items(uiState.airportSuggestions) { airport ->
                                     AirportLine(
                                         airport = airport,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable { onAirportSelected(airport) }
+                                            .clickable {
+                                                focusManager.clearFocus()
+                                                onAirportSelected(airport)
+                                            }
                                     )
                                 }
                             }
+                        } else if (uiState.airportSuggestions != null) {
+                            Text("No airports found")
                         } else {
                             CircularProgressIndicator()
                         }
                     }
                     is FlightSearchUiState.FavoriteRoutes -> {
                         RouteList(
-                            title = "Favorite routes",
+                            title =
+                                if (uiState.displayedRoutes?.isNotEmpty() == true) "Favorite routes"
+                                else "No favorite routes",
                             onFavoriteClick = onFavoriteClick,
                             routes = uiState.displayedRoutes,
                         )
@@ -135,7 +172,10 @@ fun RouteList(
     routes: List<Route>? = null,
     onFavoriteClick: (route: Route) -> Unit = {},
 ) {
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = title,
             style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -144,7 +184,7 @@ fun RouteList(
 
         if (routes != null) {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(routes) { route ->
                     RouteCard(
