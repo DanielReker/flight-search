@@ -16,8 +16,6 @@ class FlightSearchRepository @Inject constructor(
 ) {
     fun searchAirports(searchQuery: String): Flow<List<Airport>> = airportDao.searchAirports(searchQuery)
 
-    fun getAirportByIataCode(iataCode: String): Flow<Airport?> = airportDao.getAirportByIataCode(iataCode)
-
     fun getAllFavoriteRoutes(): Flow<List<Route>> = routeDao.getAllFavoriteRoutes()
 
     fun getRoutesFromAirport(departureIataCode: String): Flow<List<Route>> = routeDao.getRoutesFromAirport(departureIataCode)
