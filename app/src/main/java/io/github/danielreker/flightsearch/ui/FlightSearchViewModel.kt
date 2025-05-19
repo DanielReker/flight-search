@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -34,13 +35,13 @@ class FlightSearchViewModel @Inject constructor(
 
 
     private val airportSuggestionsFlow: StateFlow<List<Airport>?> = _currentSearchQuery
-        .debounce(300L)
+        .debounce { if (it.isNotBlank()) 300L else 0L }
         .distinctUntilChanged()
         .flatMapLatest { query ->
-            if (query.isNotBlank()) {
-                flightSearchRepository.searchAirports(query)
-            } else {
-                flowOf(null)
+            flow {
+                emit(null)
+                if (query.isNotBlank() && _currentlySelectedAirport.value == null)
+                    flightSearchRepository.searchAirports(query).collect { emit(it) }
             }
         }
         .stateIn(
@@ -51,10 +52,10 @@ class FlightSearchViewModel @Inject constructor(
 
     private val routesFromSelectedAirportFlow: StateFlow<List<Route>?> = _currentlySelectedAirport
         .flatMapLatest { selectedAirport ->
-            if (selectedAirport != null) {
-                flightSearchRepository.getRoutesFromAirport(selectedAirport.iataCode)
-            } else {
+            flow<List<Route>?> {
                 flowOf(null)
+                if (selectedAirport != null)
+                    flightSearchRepository.getRoutesFromAirport(selectedAirport.iataCode).collect { emit(it) }
             }
         }
         .stateIn(
@@ -80,22 +81,27 @@ class FlightSearchViewModel @Inject constructor(
         favoriteRoutesFlow
     ) { searchQuery, selectedAirport, airportSuggestions, routesFromSelectedAirport, favoriteRoutes ->
 
-        val displayedRoutes = if (selectedAirport != null) {
-            routesFromSelectedAirport
+        if (selectedAirport != null) {
+            FlightSearchUiState.RoutesFromAirport(
+                searchQuery = searchQuery,
+                selectedAirport = selectedAirport,
+                displayedRoutes = routesFromSelectedAirport
+            )
+        } else if (searchQuery.isNotBlank()) {
+            FlightSearchUiState.Airports(
+                searchQuery = searchQuery,
+                airportSuggestions = airportSuggestions,
+            )
         } else {
-            favoriteRoutes
+            FlightSearchUiState.FavoriteRoutes(
+                searchQuery = searchQuery,
+                displayedRoutes = favoriteRoutes
+            )
         }
-
-        FlightSearchUiState(
-            searchQuery = searchQuery,
-            selectedAirport = selectedAirport,
-            airportSuggestions = airportSuggestions,
-            displayedRoutes = displayedRoutes,
-        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000L),
-        initialValue = FlightSearchUiState()
+        initialValue = FlightSearchUiState.FavoriteRoutes(),
     )
 
 
@@ -127,7 +133,7 @@ class FlightSearchViewModel @Inject constructor(
                 val newFavorite = Favorite(
                     departureCode = route.departure.iataCode,
                     destinationCode = route.destination.iataCode,
-                    id = -1
+                    id = 0
                 )
                 flightSearchRepository.addFavorite(newFavorite)
             }
