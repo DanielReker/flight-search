@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dagger.hilt.android.AndroidEntryPoint
-import io.github.danielreker.flightsearch.ui.App
+import io.github.danielreker.flightsearch.ui.components.App
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
